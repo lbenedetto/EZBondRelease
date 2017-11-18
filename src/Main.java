@@ -60,14 +60,14 @@ public class Main extends JFrame {
 		logWriter = new BufferedWriter(new FileWriter("EZBondRelease.log", true));
 		loadLotus();
 		textPane.setBackground(new Color(43, 43, 43));
-		log(String.format("Saving to %s", time), false);
+		show(String.format("Saving to %s", time), false);
 		DefaultCaret caret = (DefaultCaret) textPane.getCaret();
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 	}
 
 	private void process() {
 		String stockNumber = textField.getText().toUpperCase().trim();
-		log(stockNumber);
+		show(stockNumber);
 		if (stockNumber.startsWith("MANUAL")) {
 			String[] d = stockNumber.split(" ");
 			save(String.format("%s,%s,%s", d[1], d[2], d[3]));
@@ -76,13 +76,14 @@ public class Main extends JFrame {
 		} else if (stockNumber.length() >= 6) {
 			handle(stockNumber, 6);
 		} else {
-			log("Invalid length", true);
+			show("Invalid length", true);
 		}
 	}
 
-	private void log(String s) {
+	private void show(String s) {
 		try {
-			logWriter.write(s);
+			logWriter.write(s + "\n");
+			logWriter.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -98,14 +99,14 @@ public class Main extends JFrame {
 				textField.setText("");
 				return;
 			}
-			log("Invalid UPS number in Lotus\n" +
+			show("Invalid UPS number in Lotus\n" +
 					"RECOMMENDED: Enter the information manually with the format \"MANUAL VIN ENTRY UPS\"", true);
 			return;
 		}
-		log("Either none or multiple entries found!\n" +
+		show("Either none or multiple entries found!\n" +
 				"RECOMMENDED: Enter the information manually with the format \"MANUAL VIN ENTRY UPS\"", true);
 		if (length == 6) {
-			log("Or, try again with the last 8 instead of the last 6", true);
+			show("Or, try again with the last 8 instead of the last 6", true);
 		}
 	}
 
@@ -135,7 +136,7 @@ public class Main extends JFrame {
 		lotus.get(stock).add(vehicle);
 	}
 
-	private void log(String msg, boolean isWhite) {
+	private void show(String msg, boolean isWhite) {
 		int len = textPane.getDocument().getLength();
 		try {
 			textPane.getDocument().insertString(len, msg + "\n", isWhite ? asWhite : asOffWhite);
@@ -146,12 +147,12 @@ public class Main extends JFrame {
 	}
 
 	private void save(String msg) {
-		log(msg, false);
+		show(msg, false);
 		try {
 			outputWriter.write(msg + "\r\n");
 			outputWriter.flush();
 		} catch (IOException e) {
-			log("Could not save output!!!!!", true);
+			show("Could not save output!!!!!", true);
 		}
 	}
 
