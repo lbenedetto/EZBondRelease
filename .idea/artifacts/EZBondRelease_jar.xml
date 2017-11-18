@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="EZBondRelease:jar">
+    <output-path>U:/Filing</output-path>
+    <root id="archive" name="EZBondRelease.jar">
+      <element id="module-output" name="EZBondRelease" />
+    </root>
+  </artifact>
+</component>
