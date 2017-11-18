@@ -19,7 +19,8 @@ public class Main extends JFrame {
 	private Document doc;
 	private AttributeSet asWhite;
 	private AttributeSet asOffWhite;
-	private BufferedWriter bw;
+	private BufferedWriter outputWriter;
+	private BufferedWriter logWriter;
 	private static HashMap<String, ArrayList<Vehicle>> lotus = new HashMap<>();
 
 	private Main() throws IOException {
@@ -55,14 +56,18 @@ public class Main extends JFrame {
 		String time = new Timestamp(System.currentTimeMillis()).toString() + ".txt";
 		File file = new File(time.replaceAll(":", ""));
 		if (file.createNewFile())
-			bw = new BufferedWriter(new FileWriter(file));
+			outputWriter = new BufferedWriter(new FileWriter(file));
+		logWriter = new BufferedWriter(new FileWriter("EZBondRelease.log", true));
 		loadLotus();
 		textPane.setBackground(new Color(43, 43, 43));
 		log(String.format("Saving to %s", time), false);
+		DefaultCaret caret = (DefaultCaret) textPane.getCaret();
+		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 	}
 
 	private void process() {
 		String stockNumber = textField.getText().toUpperCase().trim();
+		log(stockNumber);
 		if (stockNumber.startsWith("MANUAL")) {
 			String[] d = stockNumber.split(" ");
 			save(String.format("%s,%s,%s", d[1], d[2], d[3]));
@@ -72,6 +77,14 @@ public class Main extends JFrame {
 			handle(stockNumber, 6);
 		} else {
 			log("Invalid length", true);
+		}
+	}
+
+	private void log(String s) {
+		try {
+			logWriter.write(s);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -135,8 +148,8 @@ public class Main extends JFrame {
 	private void save(String msg) {
 		log(msg, false);
 		try {
-			bw.write(msg + "\r\n");
-			bw.flush();
+			outputWriter.write(msg + "\r\n");
+			outputWriter.flush();
 		} catch (IOException e) {
 			log("Could not save output!!!!!", true);
 		}
