@@ -10,18 +10,22 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Main extends JFrame {
 	private JPanel contentPane;
 	private JTextPane textPane;
 	private JTextField textField;
-	private Document doc;
 	private AttributeSet asWhite;
 	private AttributeSet asOffWhite;
-	private BufferedWriter outputWriter;
+	private BufferedWriter outputWriterRetta;
+	private BufferedWriter outputWriterUs;
 	private BufferedWriter logWriter;
 	private static HashMap<String, ArrayList<Vehicle>> lotus = new HashMap<>();
+	private static HashSet<String> alreadyRequested = new HashSet<>();
+	private static HashSet<String> enteredThisSession = new HashSet<>();
 
 	private Main() throws IOException {
 		setContentPane(contentPane);
@@ -40,7 +44,6 @@ public class Main extends JFrame {
 				JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
 		textField.addActionListener(e -> process());
-		doc = textPane.getDocument();
 		textPane.setEditable(false);
 		StyleContext sc = StyleContext.getDefaultStyleContext();
 		//Color 1 - White
@@ -53,10 +56,13 @@ public class Main extends JFrame {
 		asOffWhite = sc.addAttribute(asOffWhite, StyleConstants.FontFamily, "Lucida Console");
 		asOffWhite = sc.addAttribute(asOffWhite, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
 		//File file = new File(new Timestamp(System.currentTimeMillis()).toString() + ".txt");
-		String time = new Timestamp(System.currentTimeMillis()).toString() + ".txt";
-		File file = new File(time.replaceAll(":", ""));
-		if (file.createNewFile())
-			outputWriter = new BufferedWriter(new FileWriter(file));
+		String time = new Timestamp(System.currentTimeMillis()).toString().replaceAll(":", "") + ".txt";
+		File file1 = new File("Retta" + time);
+		File file2 = new File("Us" + time);
+		if (file1.createNewFile() && file2.createNewFile()) {
+			outputWriterRetta = new BufferedWriter(new FileWriter(file1));
+			outputWriterUs = new BufferedWriter(new FileWriter(file2));
+		}
 		logWriter = new BufferedWriter(new FileWriter("EZBondRelease.log", true));
 		loadLotus();
 		textPane.setBackground(new Color(43, 43, 43));
@@ -66,11 +72,21 @@ public class Main extends JFrame {
 	}
 
 	private void process() {
-		String stockNumber = textField.getText().toUpperCase().trim();
-		show(stockNumber);
+		String input = textField.getText().toUpperCase().trim();
+		if (input.length() > 17) Arrays.stream(input.split(" ")).forEach(this::process);
+		process(input);
+	}
+
+	private void process(String stockNumber) {
+		log(stockNumber);
+		if (enteredThisSession.contains(stockNumber)) {
+			show("Already entered that this session. Use MANUAL to override", true);
+			return;
+		}
+		enteredThisSession.add(stockNumber);
 		if (stockNumber.startsWith("MANUAL")) {
 			String[] d = stockNumber.split(" ");
-			save(String.format("%s,%s,%s", d[1], d[2], d[3]));
+			save(String.format("%s,%s,%s", d[1], d[2], d[3]), outputWriterRetta, outputWriterUs);
 		} else if (stockNumber.length() >= 8) {
 			handle(stockNumber, 8);
 		} else if (stockNumber.length() >= 6) {
@@ -80,23 +96,19 @@ public class Main extends JFrame {
 		}
 	}
 
-	private void show(String s) {
-		try {
-			logWriter.write(s + "\n");
-			logWriter.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
 	private void handle(String stockNumber, int length) {
 		stockNumber = stockNumber.substring(stockNumber.length() - length, stockNumber.length());
 		ArrayList<Vehicle> av = lotus.get(stockNumber);
 		if (av != null && av.size() == 1) {
 			Vehicle v = av.get(0);
 			if (v.validUPS()) {
-				save(v.toString());
-				textField.setText("");
+				if (!alreadyRequested.contains(v.getVIN())) {
+					save(v.toString(), outputWriterRetta, outputWriterUs);
+					textField.setText("");
+					return;
+				}
+				save(v.toString(), outputWriterUs);
+				show("We already have that bond release", true);
 				return;
 			}
 			show("Invalid UPS number in Lotus\n" +
@@ -112,6 +124,11 @@ public class Main extends JFrame {
 
 	private static void loadLotus() {
 		try {
+			Files.lines(Paths.get("U:\\Filing\\2016 bond release.csv")).forEach(line -> {
+				String[] data = line.split(",");
+				if (data[1].equals("t"))
+					alreadyRequested.add(data[0]);
+			});
 			Files.lines(Paths.get("U:\\Filing\\Bond Release Database.txt")).forEach(data -> {
 				String[] datum = data.split(",");
 				String vin = datum[0].trim();
@@ -137,22 +154,34 @@ public class Main extends JFrame {
 	}
 
 	private void show(String msg, boolean isWhite) {
-		int len = textPane.getDocument().getLength();
+		Document doc = textPane.getDocument();
 		try {
-			textPane.getDocument().insertString(len, msg + "\n", isWhite ? asWhite : asOffWhite);
+			doc.insertString(doc.getLength(), msg + "\n", isWhite ? asWhite : asOffWhite);
+			textPane.setCaretPosition(doc.getLength());
 		} catch (BadLocationException e) {
 			e.printStackTrace();
 		}
 		System.out.println(msg);
 	}
 
-	private void save(String msg) {
+	private void save(String msg, BufferedWriter... destinations) {
 		show(msg, false);
 		try {
-			outputWriter.write(msg + "\r\n");
-			outputWriter.flush();
+			for (BufferedWriter destination : destinations) {
+				destination.write(msg + "\r\n");
+				destination.flush();
+			}
 		} catch (IOException e) {
 			show("Could not save output!!!!!", true);
+		}
+	}
+
+	private void log(String s) {
+		try {
+			logWriter.write(s + "\n");
+			logWriter.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
