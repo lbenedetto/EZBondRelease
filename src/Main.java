@@ -176,9 +176,9 @@ public class Main extends JFrame {
 		}
 	}
 
-	private void log(String s) {
+	private void log(String msg) {
 		try {
-			logWriter.write(s + "\n");
+			logWriter.write(String.format("%s %s\r\n", new Timestamp(System.currentTimeMillis()).toString(), msg));
 			logWriter.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
